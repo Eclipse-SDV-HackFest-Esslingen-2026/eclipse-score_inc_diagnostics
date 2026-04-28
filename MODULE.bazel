@@ -18,10 +18,18 @@ module(
 # Rust rules for Bazel
 bazel_dep(name = "rules_rust", version = "0.63.0")
 
-# S-CORE Rust toolchain (Ferrocene)
-bazel_dep(name = "score_toolchains_rust", version = "0.9.1")
+# NOTE: In production, score_toolchains_rust (Ferrocene) would be used here.
+# For this HackFest concept branch the default rules_rust toolchain is used
+# because upstream CDA dependencies (time-macros) require nightly proc_macro
+# features not available in Ferrocene's stable channel.
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.toolchain(
+    edition = "2024",
+    versions = ["1.88.0"],
+)
+use_repo(rust, "rust_toolchains")
 
-register_toolchains("@score_toolchains_rust//toolchains/ferrocene:all")
+register_toolchains("@rust_toolchains//:all")
 
 # Fetch the Classic Diagnostic Adapter at a fixed commit (read-only, unmodified)
 cda = use_extension("//extensions:cda_repo.bzl", "cda_ext")
@@ -29,6 +37,15 @@ use_repo(cda, "classic_diagnostic_adapter")
 
 # Cargo dependency resolution via crate_universe
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+# Force openssl-sys to use the vendored openssl-src crate (static, hermetic)
+# instead of resolving OpenSSL from the host via pkg-config.
+crate.annotation(
+    crate = "openssl-sys",
+    build_script_env = {
+        "OPENSSL_STATIC": "1",
+        "OPENSSL_VENDORED": "1",
+    },
+)
 crate.from_cargo(
     name = "cda_crates",
     cargo_lockfile = "@classic_diagnostic_adapter//:Cargo.lock",
@@ -48,6 +65,7 @@ crate.from_cargo(
         "@classic_diagnostic_adapter//cda-tracing:Cargo.toml",
         "@classic_diagnostic_adapter//comm-mbedtls/mbedtls-sys:Cargo.toml",
         "@classic_diagnostic_adapter//comm-mbedtls/mbedtls-rs:Cargo.toml",
+        "@classic_diagnostic_adapter//integration-tests:Cargo.toml",
     ],
 )
 use_repo(crate, "cda_crates")

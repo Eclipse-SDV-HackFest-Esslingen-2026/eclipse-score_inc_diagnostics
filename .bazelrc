@@ -1,0 +1,9 @@
+# Use the Eclipse S-CORE Bazel registry for score_* modules
+common --registry=https://raw.githubusercontent.com/eclipse-score/bazel_registry/main
+common --registry=https://bcr.bazel.build
+
+# Allow openssl-sys to find libssl via pkg-config from the host
+build --action_env=PKG_CONFIG_PATH
+build --action_env=PKG_CONFIG_SYSROOT_DIR
+# OpenSSL is resolved via the vendored openssl-src crate (OPENSSL_VENDORED=1 in MODULE.bazel).
+# The host OpenSSL env vars are intentionally NOT forwarded into the sandbox.
