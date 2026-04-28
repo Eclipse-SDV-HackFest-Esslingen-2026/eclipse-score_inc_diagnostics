@@ -1,0 +1,20 @@
+{
+    "name": "eclipse-s-core",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "args": {
+            "USERNAME": "${localEnv:USER}"
+        }
+    },
+    "remoteUser": "${localEnv:USER}",
+    "runArgs": [
+        "--privileged"
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "BazelBuild.vscode-bazel"
+            ]
+        }
+    }
+}
