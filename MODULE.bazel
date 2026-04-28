@@ -48,6 +48,41 @@ use_repo(llvm, "llvm_toolchain_llvm")
 
 register_toolchains("@llvm_toolchain//:all")
 
+# S-CORE Rust toolchain (Ferrocene) from https://github.com/eclipse-score/toolchains_rust
+bazel_dep(name = "score_toolchains_rust", version = "0.9.1")
+
+register_toolchains("@score_toolchains_rust//toolchains/ferrocene:all")
+
+# Classic Diagnostic Adapter (https://github.com/eclipse-opensovd/classic-diagnostic-adapter)
+cda = use_extension("//extensions:cda_repo.bzl", "cda_ext")
+use_repo(cda, "classic_diagnostic_adapter")
+
+# Cargo dependency resolution for the Classic Diagnostic Adapter workspace
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+crate.from_cargo(
+    name = "cda_crates",
+    cargo_lockfile = "@classic_diagnostic_adapter//:Cargo.lock",
+    manifests = [
+        "@classic_diagnostic_adapter//:Cargo.toml",
+        "@classic_diagnostic_adapter//cda-build:Cargo.toml",
+        "@classic_diagnostic_adapter//cda-comm-doip:Cargo.toml",
+        "@classic_diagnostic_adapter//cda-comm-uds:Cargo.toml",
+        "@classic_diagnostic_adapter//cda-core:Cargo.toml",
+        "@classic_diagnostic_adapter//cda-database:Cargo.toml",
+        "@classic_diagnostic_adapter//cda-health:Cargo.toml",
+        "@classic_diagnostic_adapter//cda-interfaces:Cargo.toml",
+        "@classic_diagnostic_adapter//cda-main:Cargo.toml",
+        "@classic_diagnostic_adapter//cda-plugin-security:Cargo.toml",
+        "@classic_diagnostic_adapter//cda-sovd:Cargo.toml",
+        "@classic_diagnostic_adapter//cda-sovd-interfaces:Cargo.toml",
+        "@classic_diagnostic_adapter//cda-tracing:Cargo.toml",
+        "@classic_diagnostic_adapter//comm-mbedtls/mbedtls-sys:Cargo.toml",
+        "@classic_diagnostic_adapter//comm-mbedtls/mbedtls-rs:Cargo.toml",
+        "@classic_diagnostic_adapter//integration-tests:Cargo.toml",
+    ],
+)
+use_repo(crate, "cda_crates")
+
 # tooling
 bazel_dep(name = "score_tooling", version = "1.0.1")
 bazel_dep(name = "aspect_rules_lint", version = "1.5.3")
