@@ -29,6 +29,40 @@ _LIB_CRATES = {
     "comm-mbedtls/mbedtls-rs": "mbedtls_rs",
 }
 
+# Intra-workspace dependencies for each library crate (path -> list of Bazel labels)
+_LIB_EXTRA_DEPS = {
+    "cda-comm-doip": ["//cda-interfaces:cda_interfaces"],
+    "cda-comm-uds": ["//cda-interfaces:cda_interfaces"],
+    "cda-core": [
+        "//cda-interfaces:cda_interfaces",
+        "//cda-database:cda_database",
+        "//cda-plugin-security:cda_plugin_security",
+    ],
+    "cda-database": [
+        "//cda-interfaces:cda_interfaces",
+        "//cda-build:cda_build",
+    ],
+    "cda-health": [
+        "//cda-interfaces:cda_interfaces",
+        "//cda-sovd:cda_sovd",
+    ],
+    "cda-plugin-security": [
+        "//cda-interfaces:cda_interfaces",
+        "//cda-database:cda_database",
+        "//cda-sovd-interfaces:sovd_interfaces",
+    ],
+    "cda-sovd": [
+        "//cda-interfaces:cda_interfaces",
+        "//cda-plugin-security:cda_plugin_security",
+        "//cda-tracing:cda_tracing",
+        "//cda-build:cda_build",
+        "//cda-sovd-interfaces:sovd_interfaces",
+    ],
+    "cda-sovd-interfaces": ["//cda-interfaces:cda_interfaces"],
+    "cda-tracing": ["//cda-build:cda_build"],
+    "comm-mbedtls/mbedtls-rs": [],
+}
+
 _LIB_BUILD_TEMPLATE = """\
 load("@cda_crates//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_library")
@@ -38,7 +72,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     aliases = aliases(),
     crate_name = "{crate_name}",
-    deps = all_crate_deps(),
+    deps = all_crate_deps() + {extra_deps},
     proc_macro_deps = all_crate_deps(proc_macro = True),
     edition = "2024",
     visibility = ["//visibility:public"],
@@ -53,17 +87,33 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 cargo_build_script(
     name = "build_script",
     srcs = ["build.rs"],
-    deps = all_crate_deps(build = True),
+    deps = all_crate_deps(build = True) + ["@cda_crates//:chrono-0.4.43"],
     proc_macro_deps = all_crate_deps(build_proc_macro = True),
     edition = "2024",
+    build_script_env = {
+        "SOURCE_DATE_EPOCH": "0",
+        "SOURCE_GIT_SHA": "unknown",
+    },
 )
+
+_WORKSPACE_DEPS = [
+    "//cda-comm-doip:cda_comm_doip",
+    "//cda-comm-uds:cda_comm_uds",
+    "//cda-core:cda_core",
+    "//cda-database:cda_database",
+    "//cda-health:cda_health",
+    "//cda-interfaces:cda_interfaces",
+    "//cda-plugin-security:cda_plugin_security",
+    "//cda-sovd:cda_sovd",
+    "//cda-tracing:cda_tracing",
+]
 
 rust_library(
     name = "opensovd_cda_lib",
     srcs = glob(["src/**/*.rs"], exclude = ["src/main.rs"]),
     aliases = aliases(),
     crate_name = "opensovd_cda_lib",
-    deps = all_crate_deps() + [":build_script"],
+    deps = all_crate_deps() + [":build_script"] + _WORKSPACE_DEPS,
     proc_macro_deps = all_crate_deps(proc_macro = True),
     edition = "2024",
     visibility = ["//visibility:public"],
@@ -73,7 +123,7 @@ rust_binary(
     name = "opensovd_cda",
     srcs = ["src/main.rs"],
     aliases = aliases(),
-    deps = all_crate_deps() + [":opensovd_cda_lib"],
+    deps = all_crate_deps() + [":opensovd_cda_lib", ":build_script"] + _WORKSPACE_DEPS,
     proc_macro_deps = all_crate_deps(proc_macro = True),
     edition = "2024",
     visibility = ["//visibility:public"],
@@ -125,9 +175,14 @@ exports_files([
 
     # Standard library crates
     for dir_path, crate_name in _LIB_CRATES.items():
+        extra = _LIB_EXTRA_DEPS.get(dir_path, [])
+        extra_deps_str = "[" + ", ".join(['"' + d + '"' for d in extra]) + "]"
         rctx.file(
             dir_path + "/BUILD.bazel",
-            _LIB_BUILD_TEMPLATE.format(crate_name = crate_name),
+            _LIB_BUILD_TEMPLATE.format(
+                crate_name = crate_name,
+                extra_deps = extra_deps_str,
+            ),
         )
 
     # cda-main: binary + library with build.rs
