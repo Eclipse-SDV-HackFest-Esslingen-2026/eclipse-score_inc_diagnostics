@@ -37,6 +37,15 @@ bazel_dep(name = "rules_cc", version = "0.2.1")
 
 # LLVM Toolchains Rules - host configuration
 bazel_dep(name = "toolchains_llvm", version = "1.4.0")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "score_bazel_platforms")
+single_version_override(
+    module_name = "score_bazel_platforms",
+    version = "0.1.2",
+)
+
+# Openssl dependency for classic diagnostic adapter
+bazel_dep(name = "openssl", version = "3.5.5.bcr.4")
 
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
 llvm.toolchain(
@@ -46,12 +55,12 @@ llvm.toolchain(
 use_repo(llvm, "llvm_toolchain")
 use_repo(llvm, "llvm_toolchain_llvm")
 
-register_toolchains("@llvm_toolchain//:all")
+# register_toolchains("@llvm_toolchain//:all")
 
 # S-CORE Rust toolchain (Ferrocene) from https://github.com/eclipse-score/toolchains_rust
 bazel_dep(name = "score_toolchains_rust", version = "0.9.1")
 
-register_toolchains("@score_toolchains_rust//toolchains/ferrocene:all")
+# register_toolchains("@score_toolchains_rust//toolchains/ferrocene:all")
 
 # Classic Diagnostic Adapter (https://github.com/eclipse-opensovd/classic-diagnostic-adapter)
 cda = use_extension("//extensions:cda_repo.bzl", "cda_ext")
@@ -59,6 +68,16 @@ use_repo(cda, "classic_diagnostic_adapter")
 
 # Cargo dependency resolution for the Classic Diagnostic Adapter workspace
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+crate.annotation(
+    build_script_data = [
+        "@@openssl+//:install",
+    ],
+    build_script_env = {
+        "OPENSSL_DIR": "$(execpath @@openssl+//:install)",
+        "OPENSSL_STATIC": "1",
+    },
+    crate = "openssl-sys",
+)
 crate.from_cargo(
     name = "cda_crates",
     cargo_lockfile = "@classic_diagnostic_adapter//:Cargo.lock",
@@ -89,4 +108,65 @@ bazel_dep(name = "aspect_rules_lint", version = "1.5.3")
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2")
 
 #docs-as-code
-bazel_dep(name = "score_docs_as_code", version = "1.1.0")
+bazel_dep(name = "score_docs_as_code", version = "2.0.3")
+
+# bazel cpp toolchains
+bazel_dep(name = "score_bazel_cpp_toolchains", version = "0.5.0")
+git_override(
+    module_name = "score_bazel_cpp_toolchains",
+    commit = "eba6b8c4b2d1d410a7f0cf8aae8b7938320bf6c8",
+    remote = "https://github.com/eclipse-score/bazel_cpp_toolchains.git",
+)
+
+gcc = use_extension("@score_bazel_cpp_toolchains//extensions:gcc.bzl", "gcc", dev_dependency = True)
+gcc.toolchain(
+    name = "score_gcc_x86_64_toolchain",
+    target_cpu = "x86_64",
+    target_os = "linux",
+    use_default_package = True,
+    version = "12.2.0",
+)
+gcc.toolchain(
+    name = "score_ebclfsa_toolchain",
+    runtime_ecosystem = "ebclfsa",
+    sdk_version = "0.1.0",
+    target_cpu = "aarch64",
+    target_os = "linux",
+    use_default_package = True,
+)
+use_repo(
+    gcc,
+    "score_ebclfsa_toolchain",
+    "score_gcc_x86_64_toolchain",
+)
+
+ferrocene = use_extension(
+    "@score_toolchains_rust//extensions:ferrocene_toolchain_ext.bzl",
+    "ferrocene_toolchain_ext",
+)
+ferrocene.toolchain(
+    name = "ferrocene_aarch64_ebclfsa",
+    coverage_tools_sha256 = "497958e925bc94833ea226d68f6d5ba38bd890f571c73e230141d2923e30dd94",
+    coverage_tools_strip_prefix = "779fbed05ae9e9fe2a04137929d99cc9b3d516fd/x86_64-unknown-linux-gnu",
+    coverage_tools_url = "https://github.com/eclipse-score/ferrocene_toolchain_builder/releases/download/1.0.1/coverage-tools-779fbed05ae9e9fe2a04137929d99cc9b3d516fd-x86_64-unknown-linux-gnu.tar.gz",
+    exec_triple = "x86_64-unknown-linux-gnu",
+    extra_rustc_flags = [
+        "-Clink-arg=-Wl,--no-as-needed",
+        "-Clink-arg=-lstdc++",
+        "-Clink-arg=-static-libstdc++",
+        "-Clink-arg=-static",
+        "-Clink-arg=-lm",
+        "-Clink-arg=-lc",
+    ],
+    sha256 = "b1f1eb1146bf595fe1f4a65d5793b7039b37d2cb6d395d1c3100fa7d0377b6c9",
+    target_compatible_with = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:linux",
+    ],
+    target_triple = "aarch64-unknown-linux-gnu",
+    url = "https://github.com/eclipse-score/ferrocene_toolchain_builder/releases/download/1.0.1/ferrocene-779fbed05ae9e9fe2a04137929d99cc9b3d516fd-aarch64-unknown-linux-gnu.tar.gz",
+)
+use_repo(
+    ferrocene,
+    "ferrocene_aarch64_ebclfsa",
+)
