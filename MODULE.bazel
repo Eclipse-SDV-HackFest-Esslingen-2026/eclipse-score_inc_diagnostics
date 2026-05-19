@@ -46,7 +46,7 @@ llvm.toolchain(
 use_repo(llvm, "llvm_toolchain")
 use_repo(llvm, "llvm_toolchain_llvm")
 
-register_toolchains("@llvm_toolchain//:all")
+# register_toolchains("@llvm_toolchain//:all")
 
 # S-CORE Rust toolchain (Ferrocene) from https://github.com/eclipse-score/toolchains_rust
 bazel_dep(name = "score_toolchains_rust", version = "0.9.1")
@@ -81,12 +81,29 @@ crate.from_cargo(
         "@classic_diagnostic_adapter//integration-tests:Cargo.toml",
     ],
 )
+
+crate.annotation(
+    build_script_data = [
+        "@@score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg//:all_files",
+    ],
+    build_script_env = {
+        #"PKG_CONFIG_ALLOW_CROSS": "1",
+        #"PKG_CONFIG_SYSROOT_DIR": "$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg",
+        #"PKG_CONFIG_PATH": "$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg/usr/lib/aarch64-linux-gnu/pkgconfig:$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg/usr/lib/pkgconfig:$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg/usr/share/pkgconfig",
+        #"PKG_CONFIG_LIBDIR": "$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg/usr/lib/aarch64-linux-gnu/pkgconfig:$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg/usr/lib/pkgconfig:$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg/usr/share/pkgconfig",
+        "PKG_CONFIG_ALLOW_CROSS_aarch64-unknown-linux-gnu": "1",
+        "PKG_CONFIG_SYSROOT_DIR_aarch64-unknown-linux-gnu": "$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg",
+        "PKG_CONFIG_PATH_aarch64-unknown-linux-gnu": "$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg/usr/lib/aarch64-linux-gnu/pkgconfig:$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg/usr/lib/pkgconfig:$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg/usr/share/pkgconfig",
+        "PKG_CONFIG_LIBDIR_aarch64-unknown-linux-gnu": "$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg/usr/lib/aarch64-linux-gnu/pkgconfig:$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg/usr/lib/pkgconfig:$${pwd}/external/score_bazel_cpp_toolchains++gcc+score_ebclfsa_toolchain_raspi_pkg/usr/share/pkgconfig",
+    },
+    crate = "openssl-sys",
+)
 use_repo(crate, "cda_crates")
 
 # tooling
-bazel_dep(name = "score_tooling", version = "1.0.1")
-bazel_dep(name = "aspect_rules_lint", version = "1.5.3")
-bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2")
+# bazel_dep(name = "score_tooling", version = "1.0.1")
+# bazel_dep(name = "aspect_rules_lint", version = "1.5.3")
+# bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2")
 
 #docs-as-code
-bazel_dep(name = "score_docs_as_code", version = "1.1.0")
+# bazel_dep(name = "score_docs_as_code", version = "1.1.0")
